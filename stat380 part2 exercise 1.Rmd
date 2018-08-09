@@ -1,0 +1,408 @@
+---
+title: 'STA 380, Part 2: Exercises 1'
+author: "Kemei Zhuo"
+date: "August 2, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+#Part A.
+
+Visitors to your website are asked to answer a single survey question before they get access to the content on the page. Among all of the users, there are two categories: Random Clicker (RC), and Truthful Clicker (TC). There are two possible answers to the survey: yes and no. Random clickers would click either one with equal probability. You are also giving the information that the expected fraction of random clickers is 0.3.
+After a trial period, you get the following survey results: 65% said Yes and 35% said No.
+What fraction of people who are truthful clickers answered yes?
+
+```{r}
+rc_yes = 0.5
+rc_no = 0.5
+rc_weight = 0.3
+tc_weight = 1 - rc_weight
+tc_yes = (0.65 - rc_weight*rc_yes) / tc_weight
+tc_yes
+```
+
+#Part B.
+Imagine a medical test for a disease with the following two attributes:
+
+The sensitivity is about 0.993. That is, if someone has the disease, there is a probability of 0.993 that they will test positive.
+
+The specificity is about 0.9999. This means that if someone doesn't have the disease, there is probability of 0.9999 that they will test negative.
+
+In the general population, incidence of the disease is reasonably rare: about 0.0025% of all people have it (or 0.000025 as a decimal probability).
+
+Suppose someone tests positive. What is the probability that they have the disease? In light of this calculation, do you envision any problems in implementing a universal testing policy for the disease?
+
+The people with no disease have a very high weight. Even though that the specificity is high, the high probabitliy of people with no disease still makes it a large number compared to the True positive rate times the probability of having the disease. Thus, it is hard to test the effectiveness of medical test.
+```{r}
+True_positive = 0.993
+True_negative = 0.9999
+False_positive = 1 - True_negative
+Disease_proba = 0.000025
+Positive_percentage = True_positive * Disease_proba + False_positive * (1-Disease_proba)
+True_positive * Disease_proba / Positive_percentage
+```
+
+#Exploratory analysis: green buildings
+
+```{r, echo=FALSE}
+data = read.csv("C:/Users/zjfhz/Desktop/predictive model/greenhouse.txt")
+```
+
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+library(ggthemes)
+library(gridExtra)
+
+data$net = as.factor(data$net)
+```
+
+An Austin real-estate developer is interested in building a new 15-story mixed-use building on East Cesar Chaves, just across I-35 from downtown. The baseline construction costs are $100 million, with a 5% expected premium for green certification. She wants to know that whether it would be enocomicly worth to invest in a green building rather than an ordinary building. 
+
+```{r, echo=FALSE}
+index = data['green_rating'] ==1
+green = data[index,]
+not_green = data[-index,]
+```
+
+```{r, echo=FALSE}
+ggplot(green, aes(cluster)) + geom_line(aes(y = Rent, colour = "rent of a green buidling")) + theme_tufte() + ggtitle('Rent premium in Green Buildings vs Average Rent Premium in Same Region') + labs(x='cluster', color="Green or not")+geom_line(aes(y = cluster_rent, colour = "average_rent"))
+```
+
+We know that a green building is associated with social responsibility and ecological awareness, and might therefore command a premium from potential tenants. We can see this relationship through the plot above: rent rate of green buidlings are higher than average price of the same region most of the time. 
+
+```{r, echo=FALSE}
+a_grade = data[data['class_a']==1,]
+b_grade = data[data['class_b']==1,]
+c_grade = data[data['class_a']!=1 & data['class_b']!=1, ]
+```
+
+```{r, echo=FALSE}
+par(mfrow=c(1,3))
+
+boxplot(Rent~green_rating, data=a_grade, ylim=c(5, 40), main="Rent for Class_a Buidling", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(Rent~green_rating, data=b_grade, ylim=c(5, 40), main="Rent for Class_b Buidling", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(Rent~green_rating, data=c_grade, ylim=c(5, 40), main="Rent for Class_c Buidling", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+```
+By looking at the rent under three classes of buildings: class a, class b, and class c, the rent premium decreases as the class of building decreases. It is surprising that a class c green building has the highest rate. However, a high rent premium is usually associated with low occupancy rate. Thus, we take both rent and leasing rate into consideration. 
+
+```{r}
+data['rent_income_per_square'] = data['Rent'] * data['leasing_rate'] / 100
+```
+
+Because some rent premiums do not include utility bills, I separated the data into two groups by the varaible 'net' and compared the rent income of a green building with the rent income of an ordinary building under three classes. The median rent income per square of a green building is much higher than an ordinary building.
+
+```{r, echo=FALSE}
+a_grade = data[data['class_a']==1,]
+b_grade = data[data['class_b']==1,]
+c_grade = data[data['class_a']!=1 & data['class_b']!=1, ]
+index = a_grade['net'] ==1
+net_a = a_grade[index,]
+not_net_a = a_grade[-index,]
+index = b_grade['net'] ==1
+net_b = b_grade[index,]
+not_net_b = b_grade[-index,]
+index = c_grade['net'] ==1
+net_c = c_grade[index,]
+not_net_c = c_grade[-index,]
+```
+
+```{r, echo=FALSE, fig.height=4}
+par(mfrow=c(1,2))
+
+boxplot(rent_income_per_square~green_rating, data=net_a, ylim=c(0, 60), main="Class A: Rent (utlity not included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(rent_income_per_square~green_rating, data=not_net_a, ylim=c(0, 60), main="Class A: Rent (utlity included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(rent_income_per_square~green_rating, data=net_b, ylim=c(0, 60), main="Class B: Rent (utlity not included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(rent_income_per_square~green_rating, data=not_net_b, ylim=c(0, 60), main="Class B: Rent (utlity included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(rent_income_per_square~green_rating, data=net_c, ylim=c(0, 60), main="Class C: Rent (utlity not included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+boxplot(rent_income_per_square~green_rating, data=not_net_c, ylim=c(0, 60), main="Class C: Rent (utlity included)", xlab='Green Building or not', ylab='Rent per square per calendar year in dollar')
+
+```
+
+```{r, echo=FALSE}
+green_rate = median(net_a[net_a['green_rating']==1, ]$rent_income)*250000
+
+non_green = median(net_a[net_a['green_rating']==0, ]$rent_income)*250000
+```
+
+We don't know which class our building will be classified into for sure, but we know that class of building is associated with building age. Assuming that the developer wants to build a good building and our building will be new, our building will be likely to be classified into class a. 
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(data, aes(age)) + 
+    geom_histogram(data = a_grade, aes(fill = "class_a"), alpha = 0.8, bins=40) + 
+    geom_histogram(data = b_grade, aes(fill = "class_b"), alpha = 0.8, bins=40) +
+    geom_histogram(data = c_grade, aes(fill = "class_c"), alpha = 0.8, bins=35)+ 
+  scale_fill_manual("building class", values = c(class_a = "red", class_b = "blue", class_c="yellow")) + theme_tufte()
+```
+
+The majority of buildings include utility bill in rent premium, I use its medium as our base rent income per square. Because the building has 250,000 square feet, the total income from tenants per calendar year would be $`r green_rate`$. If the developer decides to build an ordinary building, the total income from tenants per calendar year would be $`r non_green`$. The time to recover the total cost would be $`r 105000000/green_rate`$ years for green building but $`r 100000000/non_green`$ years for non-green buidling if we don't consider the interest rate or inflation rate. Thus, building an ordinary building saves 9 month to recover the cost. Because we used the rent income of non-net contract, a part our rent income is used to pay utility bills. A green building would have low utility costs so we pay less each year. There are other benefits assocaited with green buildings. Green buildings would have a longer buidling life with lower energy risk, and higher employee productivity. As you can see from the plot, a class c green building also have a high rent premium. Thus, by looking far into the future, the developer should biuld a green building. 
+
+
+#Bootstrapping
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(quantmod)
+library(foreach)
+library(mosaic)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+# import a few stocks
+mystocks = c("SPY", "TLT", "LQD", "EEM", "VNQ")
+getSymbols(mystocks)
+```
+```{r, echo=FALSE}
+# Adjust for splits and dividends
+SPY = adjustOHLC(SPY)
+TLT = adjustOHLC(TLT)
+LQD = adjustOHLC(LQD)
+EEM = adjustOHLC(EEM)
+VNQ = adjustOHLC(VNQ)
+```
+
+According to the standard deviation of daily returns below, we can see that the order of risk: Investment-grade corporate bonds < US Treasury bonds < US domestic equities < Real Estate < Emerging-market equities. My choice of a safer portfolios contains 30% of US domestic equities, 50% US Treasury bonds, and 20% of investment-grade corporate bonds. My choice of an aggressive portfolio contains 25% of US domesitc equities, 50% of emerging-market equities, and 25% of real estate. The 5% VaR for the even split portfolio is -6062.159 ; the 5% VaR for the safe portfolio is -3182.673; the 5% VaR for the aggresive portfolio is -11356.04. The mean wealth increase for the even split portfolio is 957.7837; The mean wealth increase for the safe portfolio is 551.642; The mean wealth increase for the aggressive portfolio is 1190.229. Thus, we can see that rewards are associated with higher risk. 
+```{r, echo=FALSE}
+sd1 = sd(ClCl(SPY), na.rm=TRUE)
+sd2 = sd(ClCl(TLT), na.rm=TRUE)
+sd3 = sd(ClCl(LQD), na.rm=TRUE)
+sd4 = sd(ClCl(EEM), na.rm=TRUE)
+sd5 = sd(ClCl(VNQ), na.rm=TRUE)
+```
+
+```{r}
+# the standard deviation 
+c(sd1, sd2, sd3, sd4, sd5)
+```
+
+
+```{r, echo=FALSE}
+# Combine close to close changes in a single matrix
+
+all_returns = cbind(ClCl(SPY), ClCl(TLT), ClCl(LQD), ClCl(EEM), ClCl(VNQ))
+
+
+all_returns = as.matrix(na.omit(all_returns))
+```
+
+```{r, echo=FALSE}
+return.today = resample(all_returns, 1, orig.ids=FALSE)
+
+# Update the value of your holdings
+
+# Assumes an equal allocation to each asset
+
+# Now simulate many different possible scenarios  
+
+initial_wealth = 100000
+
+sim1 = foreach(i=1:3000, .combine='rbind') %do% {
+
+	total_wealth = initial_wealth
+
+	weights = c(0.2, 0.2, 0.2, 0.2, 0.2)
+
+	holdings = weights * total_wealth
+
+	n_days = 20
+
+	wealthtracker1 = rep(0, n_days)
+
+	for(today in 1:n_days) {
+
+		return.today = resample(all_returns, 1, orig.ids=FALSE)
+
+		holdings = holdings + holdings*return.today
+
+		total_wealth = sum(holdings)
+
+		wealthtracker1[today] = total_wealth
+		
+		holdings = weights * total_wealth
+
+	}
+
+	wealthtracker1
+
+}
+
+
+```
+
+```{r, echo=FALSE}
+# the even split
+# Calculate 5% value at risk and the mean increase of wealth
+q1 = quantile(sim1[,n_days], 0.05) - initial_wealth
+m1 = mean(sim1[,n_days])- initial_wealth
+```
+
+```{r, echo=FALSE}
+sim1 = foreach(i=1:5000, .combine='rbind') %do% {
+
+	total_wealth = initial_wealth
+
+	weights = c(0.3, 0.5, 0.2, 0, 0)
+
+	holdings = weights * total_wealth
+
+	n_days = 20
+
+	wealthtracker2 = rep(0, n_days)
+
+	for(today in 1:n_days) {
+
+		return.today = resample(all_returns, 1, orig.ids=FALSE)
+
+		holdings = holdings + holdings*return.today
+
+		total_wealth = sum(holdings)
+
+		wealthtracker2[today] = total_wealth
+		
+		holdings = weights * total_wealth
+
+	}
+
+	wealthtracker2
+
+}
+```
+
+```{r, echo=FALSE}
+# the safer portfolio
+q2 = quantile(sim1[,n_days], 0.05) - initial_wealth
+m2 = mean(sim1[,n_days])- initial_wealth
+```
+
+```{r, echo=FALSE}
+sim1 = foreach(i=1:5000, .combine='rbind') %do% {
+
+	total_wealth = initial_wealth
+
+	weights = c(0.25, 0, 0, 0.5, 0.25)
+
+	holdings = weights * total_wealth
+
+	n_days = 20
+
+	wealthtracker3 = rep(0, n_days)
+
+	for(today in 1:n_days) {
+
+		return.today = resample(all_returns, 1, orig.ids=FALSE)
+
+		holdings = holdings + holdings*return.today
+
+		total_wealth = sum(holdings)
+
+		wealthtracker3[today] = total_wealth
+
+		holdings = weights * total_wealth
+	}
+
+	wealthtracker3
+
+}
+```
+
+```{r, echo=FALSE}
+# the aggresive portlio
+q3 = quantile(sim1[,n_days], 0.05) - initial_wealth
+m3 = mean(sim1[,n_days])- initial_wealth
+```
+
+```{r, warning=FALSE, echo=FALSE}
+library(knitr)
+library(kableExtra)
+pp = c('the even split', 'safer split', 'aggressive split')
+q_total = c(q1, q2, q3)
+m_total = c(m1, m2, m3)
+results = data.frame( port = pp, qtotal = q_total, mtotal = m_total)
+colnames(results) = c('portfolio', '5% VaR', 'Mean increase in wealth')
+kable_styling(kable(results, format = "html", digits = 3), full_width = TRUE)
+```
+
+# Market Segmentation
+```{r, echo=FALSE}
+market = read.csv("C:/Users/zjfhz/Desktop/predictive model/social_marketing.txt")
+```
+
+```{r, echo=FALSE}
+market_scaled = scale(market[ , -1], center=TRUE, scale=TRUE) 
+```
+
+```{r, echo=FALSE}
+# Run PCA
+pc1 = prcomp(market[,-1], scale.=TRUE)
+
+```
+
+
+There are 9 clear market segments that appear to stand out in NutrientH20's social-media audience. The characteristics of each group is summarized in the following table. 
+
+```{r, echo=FALSE}
+name = c('first component', 'second component', 'third component', 'fourth component', 'fifth component', 'sixth component', 'seventh component', 'eighth component', 'nineth component')
+
+talked = c('spam, adult, online_gaming', 'chatter, photo_sharing, shopping, fasion', 'health_nutrition, cooking, personal_fitness, beauty', 'college_uni, online_gaming, sports_playing, photo_sharing', 'college_uni, online_gaming, sports_playing, tv_film', 'chatter, shopping, photo_sharing, eco', 'tv_film, art, crafts, small_businenss', 'travel, computer, dating, business', 'tv_film, business, music, health_nutrition')
+not_talked = c('sports_fandom, food, parenting, religion', 'food, parenting, religion, sports_fandom', 'travel, politics, news, computers, automotive', 'health_nutrition, outdoors, politics, personal_fitness', 'photo_sharing, shopping, beauty, chatter', 'cooking, travel, fasion, beauty', 'college_uni, sports_playing, automotive, online_gaming', 'art, tv_film, news, automotive', 'eco, small_business, spam, adult')
+results = data.frame(port = name, talk=talked, nottalk=not_talked)
+colnames(results) = c('name', 'more talked about', 'less mentioned')
+kable_styling(kable(results, format = "html", digits = 3), full_width = TRUE)
+```
+
+I first explored the vairable correlation using correlation plot. I circled out 9 clusters here because I used 9 cluster in my later PCA analysis. 
+
+```{r, warning=FALSE, echo=FALSE, fig.height=6, fig.width=6}
+library(corrplot)
+corrplot(cor(market_scaled), method = "shade", order='hclust', addrect=9)
+```
+
+From PCA analysis, we see that photo_sharing, fashion, beauty, cooking, shopping, chatter are closely associated with each other at one end; school, family, food, parenting, sports_fandom, and dating are associated with each other at the opposite direction. The crafts and the politics are at the middle. I choocse 9 compontents, which would explain 57.595% of variance. 
+```{r, echo=FALSE, fig.height=8, fig.width=8}
+biplot(pc1)
+```
+
+Then I sumamrized the cluster characteristics based on the the following model summary
+```{r}
+summary(pc1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
