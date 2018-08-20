@@ -1,0 +1,405 @@
+---
+title: "Exercise 2"
+author: "Kemei Zhuo"
+date: "August 18, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE, echo=FALSE}
+library(ggplot2)
+library(gridExtra)
+
+```
+
+## Flights at ABIA
+
+```{r, echo=FALSE}
+ABIA = read.csv("C:/Users/zjfhz/Desktop/predictive model/ABIA.csv")
+```
+
+Summary: We should take flights in the first half of month in September, October, and November, avoid the Friday, and choose flight in the morning if we want to fly from Austin. The arrival delay is not related to distance, and arrival airport for both incoming flights and outgoing flights. 
+
+**Flights from Austin** 
+
+I separated the dataset into flights that fly from Austin and flights that fly into Austin.
+
+We can see below that arrival delay is not a serious phenomenon because more than half of the flights arrive early. Still, we want to avoid the delay by avoiding the busy hour.
+
+```{r, echo=FALSE}
+# take out the flights from AUS
+mask = ABIA$Origin == 'AUS'
+fly_out = ABIA[mask, ]
+
+# Histogram of Delay
+hist(fly_out$ArrDelay, xlim = c(-40, 250), breaks =100, xlab="Arrival Delay in minutes", main="Arrival Delay For Flights From Austin")
+abline(v=median(fly_out$ArrDelay, na.rm=TRUE),col="red", lwd=2)
+```
+
+We can see from the histogram of delay in each months that March, June, and December have high delays, but September, October, and November have low delay minutes. 
+
+We can aslo see from the histogram of delay in different day of month that the delay increases during the second half of month. 
+
+We can also see from histogram of delay in a week that the delay is highest on Friday's flights. 
+
+```{r, echo=FALSE}
+par(mfrow=c(3,1))
+# Histogram of delay in different month 
+plot(aggregate(fly_out$ArrDelay,by=list(unique.values = fly_out$Month), FUN='mean', na.rm=TRUE), type="l", xlab='Month', y='Arrival Delay', main='Arrival Delay (minutes) For Flights From Austin in Each Month')
+# Histogram of delay in different day of month
+plot(aggregate(fly_out$ArrDelay,by=list(unique.values = fly_out$DayofMonth), FUN='mean', na.rm=TRUE), type="l", xlab='Day of Month', y='Arrival Delay', main='Arrival Delay (minutes) For Flights From Austin on Each Day of Month')
+# The mean of delay during a week: there's a 8-minute delay on Friday
+plot(aggregate(fly_out$ArrDelay,by=list(unique.values = fly_out$DayOfWeek), FUN='mean', na.rm=TRUE), type="l", xlab='Day of Week', y='Arrival Delay', main='Arrival Delay (minutes) For Flights From Austin in Each Week')
+
+```
+
+We can also see from histogram of delay in a day that the afternoon flight has highest delay and the flights in morning have lowest delay. 
+
+```{r, echo=FALSE, warning=FALSE}
+
+# The mean of delay during a day
+index = complete.cases(fly_out['DepTime'])
+fly_out = fly_out[index, ]
+fly_out$Time = ifelse(fly_out$DepTime < 1159, 'Morning', ifelse(fly_out$DepTime>1759, 'Afternoon', 'Evening'))
+ggplot(fly_out) + geom_bar(aes(Time, ArrDelay), position = "dodge", stat = "summary", fun.y = "mean", fill="#FFF380") + theme_bw() + xlab('Time of Day') + ggtitle('Arrival Delay in a Day')
+```
+
+Thus, we should take flights in the first half of month in September, October, and November, avoid the Friday, and choose flight in the morning if we want to fly from Austin. 
+
+I am also interested to see whether the delay is related to the number of flights. We can see that 
+  
+  *September, October, November, and December have less number of flights
+  
+  *The number of flights in each day of month is similiar
+  
+  *Saturday has less flights. 
+  
+  *The flights in morning > the flights in evening > the flgihts in afternoon
+  
+Thus, we can conclude that there's no relatinoship between arrival delay and numebr of flights. 
+
+```{r, echo=FALSE}
+# More flights during May, June, July
+a=qplot(as.factor(fly_out$Month), xlab='Month', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+# No diffrence.
+b=qplot(as.factor(fly_out$DayofMonth), xlab='Day of Month', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+# less flights in weekends. 
+c=qplot(as.factor(fly_out$DayOfWeek), xlab='Day of Week', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+d=qplot(as.factor(fly_out$Time), xlab='Time of the Day', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+grid.arrange(a, b, c,d, ncol=2, nrow=2)
+```
+
+In addition, I wonder if the distance would matter in arrival delay because international flights are almost on time. 
+
+  *Below we can see that there is no clear relationship.
+
+```{r, echo=FALSE, warning=FALSE}
+qplot(fly_out$Distance, fly_out$ArrDelay, xlab = 'Distance', ylab='Arrival Delay', main = 'The Relationship bettwen Flying Distance and Arrival Delay') + theme_bw() 
+```
+
+Then, I look into the relationship between Arrival Delay and the destination airport. Last week, I flied from Austin to Antalanta and my flights delayed for 2 hours. We can see that ATL has top arrival delay. 
+
+```{r, echo=FALSE, fig.width=10}
+bymedian = with(fly_out, reorder(Dest, -ArrDelay, median, na.rm = TRUE))
+boxplot(ArrDelay~bymedian, fly_out, ylim=c(-30, 80), las=2, main="Relatinoship of Arrival Delay and Destination Airport")
+```
+
+**Flights to Austin** 
+
+We can see below that arrival delay histogram is similiar.
+
+```{r, echo=FALSE}
+# take out the flights from AUS
+mask = ABIA$Origin == 'AUS'
+fly_in = ABIA[-mask, ]
+
+# Histogram of Delay
+hist(fly_in$ArrDelay, xlim = c(-40, 250), breaks =100, xlab="Arrival Delay in minutes", main="Arrival Delay For Flights to Austin")
+abline(v=median(fly_in$ArrDelay, na.rm=TRUE),col="red", lwd=2)
+```
+
+The insights drawn on plots below are very similiar to what we see on flights from Austin. 
+
+```{r, echo=FALSE}
+par(mfrow=c(3,1))
+# Histogram of delay in different month 
+plot(aggregate(fly_in$ArrDelay,by=list(unique.values = fly_in$Month), FUN='mean', na.rm=TRUE), type="l", xlab='Month', y='Arrival Delay', main='Arrival Delay (minutes) For Flights to Austin in Each Month')
+# Histogram of delay in different day of month
+plot(aggregate(fly_in$ArrDelay,by=list(unique.values = fly_in$DayofMonth), FUN='mean', na.rm=TRUE), type="l", xlab='Day of Month', y='Arrival Delay', main='Arrival Delay (minutes) For Flights to Austin on Each Day of Month')
+# The mean of delay during a week: there's a 8-minute delay on Friday
+plot(aggregate(fly_in$ArrDelay,by=list(unique.values = fly_in$DayOfWeek), FUN='mean', na.rm=TRUE), type="l", xlab='Day of Week', y='Arrival Delay', main='Arrival Delay (minutes) For Flights to Austin in Each Week')
+
+```
+
+We can also see from histogram of delay in a day that the afternoon flight has highest delay and the flights in morning have lowest delay. 
+
+```{r, echo=FALSE, warning=FALSE}
+# The mean of delay during a day
+index = complete.cases(fly_in['DepTime'])
+fly_in = fly_in[index, ]
+fly_in$Time = ifelse(fly_in$DepTime < 1159, 'Morning', ifelse(fly_in$DepTime>1759, 'Afternoon', 'Evening'))
+ggplot(fly_in) + geom_bar(aes(Time, ArrDelay), position = "dodge", stat = "summary", fun.y = "mean", fill="#FFF380") + theme_bw() + xlab('Time of Day') + ggtitle('Arrival Delay in a Day')
+```
+
+```{r, echo=FALSE}
+# More flights during May, June, July
+a=qplot(as.factor(fly_in$Month), xlab='Month', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+# No diffrence.
+b=qplot(as.factor(fly_in$DayofMonth), xlab='Day of Month', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+# less flights in weekends. 
+c=qplot(as.factor(fly_in$DayOfWeek), xlab='Day of Week', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+d=qplot(as.factor(fly_in$Time), xlab='Time of the Day', ylab='freq', fill=I("green"), 
+      col=I("black")) + theme_bw()
+grid.arrange(a, b, c,d, ncol=2, nrow=2)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+qplot(fly_in$Distance, fly_in$ArrDelay, xlab = 'Distance', ylab='Arrival Delay', main = 'The Relationship bettwen Flying Distance and Arrival Delay') + theme_bw() 
+```
+We can see that the airports with highest delay are different. 
+```{r, echo=FALSE, fig.width=10}
+bymedian = with(fly_in, reorder(Origin, -ArrDelay, median, na.rm = TRUE))
+boxplot(ArrDelay~bymedian, fly_in, ylim=c(-30, 80), las=2, main="Relatinoship of Arrival Delay and Destination Airport")
+```
+Conclusion: We should take flights in the first half of month in September, October, and November, avoid the Friday, and choose flight in the morning if we want to fly from Austin. The arrival delay is not related to distance. For outgoing flights, MSP, OKC, and ATL has highest arrival delay. For incoming flights, RDU, IAD, and MSP has highest arrival delay. 
+
+##Author attribution
+
+I used the naivebayes model and random Forest to predict the author identities in the test data. My way of dealing new words in test data is to cut it out in the beginning. I assumed that the same author would have similir word style and thus the new words would not be significant. Thus, I used 
+`control=list(dictionary=sort(Terms(DTM_simon)))` to make sure that the test data has the same column names as the train data, which makes the prediction later much pleasant. 
+
+The accuracy of Naivebayes is 0.2828, and the accuracy for randomForest is 0.6168. Thus, randomForest is much better than naivebayes. The ttHillis, idLawder, eMacartney are hard to classify while Gilchrist, ikoFujisaki, and nleyBrowning are easier to classify.
+
+```{r, warning=FALSE}
+library(tm)
+library(magrittr)
+
+setwd('C:/Users/zjfhz/Desktop/predictive model/STA380-master')
+
+readerPlain = function(fname){
+
+  readPlain(elem=list(content=readLines(fname)), 
+
+            id=fname, language='en') }
+# file path
+
+author_dirs1 = Sys.glob('data/ReutersC50/C50train/*')
+
+author_dirs2 = Sys.glob('data/ReutersC50/C50test/*')
+
+file_list = NULL
+
+file_list1 = NULL
+
+labels = NULL
+
+labels1 = NULL
+
+labels2 = NULL
+
+for(author in author_dirs1) {
+
+  files_to_add = Sys.glob(paste0(author, '/*.txt'))
+
+  file_list = append(file_list, files_to_add)
+  
+  author_name = substring(author, first=29)
+  
+  labels1 = append(labels1, rep(author_name, length(files_to_add)))
+}
+
+for(author in author_dirs2) {
+
+  files_to_add = Sys.glob(paste0(author, '/*.txt'))
+
+  file_list1 = append(file_list1, files_to_add)
+
+  author_name = substring(author, first=28)
+  
+  labels2 = append(labels2, rep(author_name, length(files_to_add)))
+}
+
+file_list2 = append(file_list,file_list1)
+
+labels <- unique(append(labels1, labels2))
+
+docs1 = lapply(file_list, readerPlain) 
+docs2 = lapply(file_list1, readerPlain) 
+
+name1 = file_list %>%
+  
+{ strsplit(., '/', fixed=TRUE) } %>%
+  
+{ lapply(., tail, n=2) } %>%
+  
+{ lapply(., paste0, collapse = '') } %>%
+  
+  unlist
+
+name2 = file_list1 %>%
+  
+{ strsplit(., '/', fixed=TRUE) } %>%
+  
+{ lapply(., tail, n=2) } %>%
+  
+{ lapply(., paste0, collapse = '') } %>%
+  
+  unlist
+# Rename the articles
+
+names(docs1) = name1
+names(docs2) = name2
+
+
+documents_raw = Corpus(VectorSource(docs1))
+
+my_documents = documents_raw
+
+my_documents = tm_map(my_documents, content_transformer(tolower)) # make everything lowercase
+
+my_documents = tm_map(my_documents, content_transformer(removeNumbers)) # remove numbers
+
+my_documents = tm_map(my_documents, content_transformer(removePunctuation)) # remove punctuation
+
+my_documents = tm_map(my_documents, content_transformer(stripWhitespace)) ## remove excess white-space
+
+my_documents = tm_map(my_documents, content_transformer(removeWords), stopwords("en"))
+
+DTM_simon = DocumentTermMatrix(my_documents)
+
+DTM_simon = removeSparseTerms(DTM_simon, 0.95)
+
+X_train = as.matrix(DTM_simon)
+
+documents_raw = Corpus(VectorSource(docs2))
+
+my_documents = documents_raw
+
+my_documents = tm_map(my_documents, content_transformer(tolower)) # make everything lowercase
+
+my_documents = tm_map(my_documents, content_transformer(removeNumbers)) # remove numbers
+
+my_documents = tm_map(my_documents, content_transformer(removePunctuation)) # remove punctuation
+
+my_documents = tm_map(my_documents, content_transformer(stripWhitespace)) ## remove excess white-space
+
+my_documents = tm_map(my_documents, content_transformer(removeWords), stopwords("en"))
+
+DTM_simon = DocumentTermMatrix(my_documents, control=list(dictionary=sort(Terms(DTM_simon))))
+
+X_test = as.matrix(DTM_simon)
+
+# reorder the column names
+X_train = X_train[ , order(colnames(X_train))]
+X_test = X_test[ , order(colnames(X_test))]
+```
+
+```{r, warning=FALSE}
+library(e1071)
+data_trn = cbind(data.frame(X_train), labels1)
+model1 = naiveBayes(labels1~., data=data_trn, laplace=1)
+X_test = data.frame(X_test)
+y_test = labels2
+pred_nb = predict(model1, X_test)
+t=table(pred_nb, y_test)
+sum(diag(t))/length(y_test)
+```
+
+```{r, warning=FALSE}
+library(randomForest)
+model2 = randomForest(labels1~., data=data_trn)
+pred_rf = predict(model2, X_test)
+t=table(pred_rf, labels2)
+sum(diag(t))/length(y_test)
+```
+```{r}
+# look at prediction on each author
+sort(diag(t))
+```
+
+
+
+# Practice with association rule mining
+
+After I read the data, I created the apriori algorithem that has support higher than 0.005 and confidence larger than .2. 
+```{r, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(arules)  
+library(arulesViz)
+detach(package:tm, unload=TRUE)
+
+setwd('C:/Users/zjfhz/Desktop/predictive model/STA380-master')
+groceries = read.transactions("data/groceries.txt",sep=',')
+```
+
+```{r}
+#'apriori' algorithm
+rules = apriori(groceries, 
+                     parameter=list(support=.005, confidence=.2, maxlen=5))
+plot(rules)
+```
+
+Here we had 873 rules and I'd like to trim down the rules to the ones that are more important.
+
+We can see that 
+
+  * berries, whipped/sour cream, and better is clustered together. These three are bought together
+  * citrus fruit, pip fruit, and tropical fruit is close. 
+  * yogurt stands alone
+  * herbs stands alone
+  * whole milk, other vegetables, toot vegetables are in the center, which means that most people would buy them when they do grocery shopping. 
+
+```{r}
+subrules2 = head(sort(rules, by="lift"), 10)
+plot(subrules2, method='graph')
+inspect(subrules2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
